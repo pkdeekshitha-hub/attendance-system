@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Attendance System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+    .navbar { background: linear-gradient(135deg, #1a1a2e, #e74c3c); }
+    .welcome-card { background: linear-gradient(135deg, #1a1a2e, #e74c3c); color: white; border-radius: 16px; padding: 30px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 15px rgba(0,0,0,0.06); border-left: 4px solid; }
+    .stat-card.students { border-color: #3498db; }
+    .stat-card.present { border-color: #2ecc71; }
+    .stat-card.absent { border-color: #e74c3c; }
+    .stat-card.late { border-color: #f39c12; }
+    .stat-number { font-size: 2rem; font-weight: 700; }
+    .section-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 24px; box-shadow: 0 2px 15px rgba(0,0,0,0.06); }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f4f8; }
+    .badge-present { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    .badge-absent { background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    .badge-late { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    .badge-pending { background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    .badge-approved { background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    .badge-reviewed { background: #cce5ff; color: #004085; padding: 4px 10px; border-radius: 20px; font-size: 0.82rem; }
+    th { background: #f8f9fa; color: #2c3e50; font-weight: 600; }
+    .progress { height: 8px; border-radius: 8px; }
+    .btn-export { background: #27ae60; border: none; color: white; padding: 8px 20px; border-radius: 8px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark px-4 py-3">
+    <span class="navbar-brand fw-bold"><i class="fas fa-shield-alt me-2"></i>Admin Dashboard</span>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-white" id="adminName"></span>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt me-1"></i>Logout</button>
+    </div>
+  </nav>
+  <div class="container py-4">
+    <div class="welcome-card">
+      <div class="row align-items-center">
+        <div class="col">
+          <h4 class="mb-1">Admin Control Panel</h4>
+          <p class="mb-0 opacity-75">Manage students, attendance and tasks</p>
+        </div>
+        <div class="col-auto"><i class="fas fa-chart-line fa-3x opacity-75"></i></div>
+      </div>
+    </div>
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="stat-card students"><div class="stat-number text-primary" id="statStudents">0</div><div class="text-muted small">Total Students</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card present"><div class="stat-number text-success" id="statPresent">0</div><div class="text-muted small">Total Present</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card absent"><div class="stat-number text-danger" id="statAbsent">0</div><div class="text-muted small">Total Absent</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card late"><div class="stat-number text-warning" id="statLate">0</div><div class="text-muted small">Total Late</div></div></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-chart-bar me-2 text-danger"></i>Student Performance</div>
+      <div id="performanceList"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-users me-2 text-danger"></i>All Students</div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Roll No</th><th>Joined</th><th>Action</th></tr></thead>
+          <tbody id="studentsBody"><tr><td colspan="6" class="text-center text-muted">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-calendar-alt me-2 text-danger"></i>Attendance Records</div>
+      <div class="row g-2 mb-3">
+        <div class="col-md-4"><input type="month" id="filterMonth" class="form-control"></div>
+        <div class="col-auto">
+          <button class="btn btn-primary" onclick="getAttendance()"><i class="fas fa-filter me-1"></i>Filter</button>
+          <button class="btn btn-secondary ms-2" onclick="clearFilter()"><i class="fas fa-times me-1"></i>Clear</button>
+        </div>
+        <div class="col-auto ms-auto">
+          <button class="btn-export" onclick="exportExcel()"><i class="fas fa-file-excel me-2"></i>Export Excel</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Name</th><th>Roll No</th><th>Date</th><th>Status</th><th>Marked At</th></tr></thead>
+          <tbody id="attendanceBody"><tr><td colspan="5" class="text-center text-muted">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-tasks me-2 text-danger"></i>Task Management</div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Student</th><th>Roll No</th><th>Title</th><th>Status</th><th>Submitted</th><th>Action</th></tr></thead>
+          <tbody id="tasksBody"><tr><td colspan="6" class="text-center text-muted">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    var BASE_URL = 'http://localhost:5000';
+    var adminName = localStorage.getItem('admin_name');
+    document.getElementById('adminName').innerText = adminName || 'Admin';
+    getAnalytics();
+    getStudents();
+    getAttendance();
+    getAllTasks();
+    function logout() { localStorage.removeItem('admin_token'); localStorage.removeItem('admin_name'); localStorage.removeItem('admin_id'); window.location.href = 'admin-login.html'; }
+    async function getAnalytics() {
+      try {
+        var res = await fetch(BASE_URL + '/api/admin/analytics');
+        var data = await res.json();
+        document.getElementById('statStudents').innerText = data.total_students;
+        document.getElementById('statPresent').innerText = data.total_present;
+        document.getElementById('statAbsent').innerText = data.total_absent;
+        document.getElementById('statLate').innerText = data.total_late;
+        var list = document.getElementById('performanceList');
+        if (data.student_stats.length === 0) { list.innerHTML = '<p class="text-muted">No data yet</p>'; return; }
+        var html = '';
+        for (var i = 0; i < data.student_stats.length; i++) {
+          var s = data.student_stats[i];
+          var color = s.percentage >= 75 ? 'success' : s.percentage >= 50 ? 'warning' : 'danger';
+          html += '<div class="mb-3"><div class="d-flex justify-content-between mb-1"><span class="fw-semibold">' + s.name + '</span><span class="text-' + color + ' fw-bold">' + s.percentage + '%</span></div><div class="progress"><div class="progress-bar bg-' + color + '" style="width:' + s.percentage + '%"></div></div><div class="small text-muted mt-1">Present: ' + s.present + ' / ' + s.total_days + ' days</div></div>';
+        }
+        list.innerHTML = html;
+      } catch (err) {}
+    }
+    async function getStudents() {
+      try {
+        var res = await fetch(BASE_URL + '/api/admin/students');
+        var data = await res.json();
+        var tbody = document.getElementById('studentsBody');
+        if (data.students.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No students yet</td></tr>'; return; }
+        var rows = '';
+        for (var i = 0; i < data.students.length; i++) {
+          var s = data.students[i];
+          rows += '<tr><td>' + s.student_id + '</td><td>' + s.name + '</td><td>' + s.email + '</td><td>' + (s.roll_number || '-') + '</td><td>' + s.created_at.split(' ')[0] + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteStudent(' + s.student_id + ', \'' + s.name + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+        }
+        tbody.innerHTML = rows;
+      } catch (err) {}
+    }
+    async function deleteStudent(id, name) {
+      if (!confirm('Delete student ' + name + '? This will also delete their attendance and tasks!')) return;
+      try {
+        var res = await fetch(BASE_URL + '/api/admin/students/' + id, { method: 'DELETE' });
+        var data = await res.json();
+        alert(data.message);
+        getStudents(); getAnalytics();
+      } catch (err) {}
+    }
+    async function getAttendance() {
+      try {
+        var month = document.getElementById('filterMonth').value;
+        var url = BASE_URL + '/api/admin/attendance';
+        if (month) url += '?month=' + month;
+        var res = await fetch(url);
+        var data = await res.json();
+        var tbody = document.getElementById('attendanceBody');
+        if (data.attendance.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No records found</td></tr>'; return; }
+        var rows = '';
+        for (var i = 0; i < data.attendance.length; i++) {
+          var a = data.attendance[i];
+          rows += '<tr><td>' + a.name + '</td><td>' + (a.roll_number || '-') + '</td><td>' + a.date + '</td><td><span class="badge-' + a.status.toLowerCase() + '">' + a.status + '</span></td><td>' + a.marked_at + '</td></tr>';
+        }
+        tbody.innerHTML = rows;
+      } catch (err) {}
+    }
+    function clearFilter() { document.getElementById('filterMonth').value = ''; getAttendance(); }
+    function exportExcel() { window.open(BASE_URL + '/api/export/attendance', '_blank'); }
+    async function getAllTasks() {
+      try {
+        var res = await fetch(BASE_URL + '/api/tasks/admin/all');
+        var data = await res.json();
+        var tbody = document.getElementById('tasksBody');
+        if (data.tasks.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No tasks yet</td></tr>'; return; }
+        var rows = '';
+        for (var i = 0; i < data.tasks.length; i++) {
+          var t = data.tasks[i];
+          rows += '<tr><td>' + t.student_name + '</td><td>' + (t.roll_number || '-') + '</td><td>' + t.title + '</td><td><span class="badge-' + t.status.toLowerCase() + '">' + t.status + '</span></td><td>' + t.submitted_at.split(' ')[0] + '</td><td><button class="btn btn-warning btn-sm me-1" onclick="updateTask(' + t.task_id + ', \'Reviewed\')"><i class="fas fa-eye"></i></button><button class="btn btn-success btn-sm" onclick="updateTask(' + t.task_id + ', \'Approved\')"><i class="fas fa-check"></i></button></td></tr>';
+        }
+        tbody.innerHTML = rows;
+      } catch (err) {}
+    }
+    async function updateTask(id, status) {
+      try {
+        var res = await fetch(BASE_URL + '/api/tasks/admin/update/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: status })
+        });
+        var data = await res.json();
+        alert(data.message);
+        getAllTasks();
+      } catch (err) {}
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

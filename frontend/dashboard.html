@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard - Attendance System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4f8; font-family: 'Segoe UI', sans-serif; }
+    .navbar { background: linear-gradient(135deg, #2c3e50, #3498db); }
+    .welcome-card { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; border-radius: 16px; padding: 30px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 15px rgba(0,0,0,0.06); border-left: 4px solid; }
+    .stat-card.present { border-color: #2ecc71; }
+    .stat-card.absent { border-color: #e74c3c; }
+    .stat-card.late { border-color: #f39c12; }
+    .stat-card.percentage { border-color: #3498db; }
+    .stat-number { font-size: 2rem; font-weight: 700; }
+    .section-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 24px; box-shadow: 0 2px 15px rgba(0,0,0,0.06); }
+    .section-title { font-size: 1.1rem; font-weight: 700; color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f4f8; }
+    .btn-present { background: #2ecc71; border: none; color: white; padding: 12px 25px; border-radius: 8px; font-weight: 600; }
+    .btn-absent { background: #e74c3c; border: none; color: white; padding: 12px 25px; border-radius: 8px; font-weight: 600; }
+    .btn-late { background: #f39c12; border: none; color: white; padding: 12px 25px; border-radius: 8px; font-weight: 600; }
+    .badge-present { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-absent { background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-late { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-pending { background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-approved { background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .badge-reviewed { background: #cce5ff; color: #004085; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; }
+    th { background: #f8f9fa; color: #2c3e50; font-weight: 600; }
+    .form-control:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.15); }
+    .btn-submit { background: linear-gradient(135deg, #2c3e50, #3498db); border: none; color: white; padding: 10px 25px; border-radius: 8px; font-weight: 600; }
+    .progress { height: 10px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark px-4 py-3">
+    <span class="navbar-brand fw-bold"><i class="fas fa-calendar-check me-2"></i>Attendance System</span>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-white" id="navName"></span>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt me-1"></i>Logout</button>
+    </div>
+  </nav>
+  <div class="container py-4">
+    <div class="welcome-card">
+      <div class="row align-items-center">
+        <div class="col">
+          <h4 class="mb-1">Welcome back, <span id="studentName">Student</span>!</h4>
+          <p class="mb-0 opacity-75">Track your attendance and manage your tasks</p>
+        </div>
+        <div class="col-auto"><i class="fas fa-user-graduate fa-3x opacity-75"></i></div>
+      </div>
+    </div>
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="stat-card present"><div class="stat-number text-success" id="statPresent">0</div><div class="text-muted small">Present</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card absent"><div class="stat-number text-danger" id="statAbsent">0</div><div class="text-muted small">Absent</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card late"><div class="stat-number text-warning" id="statLate">0</div><div class="text-muted small">Late</div></div></div>
+      <div class="col-6 col-md-3"><div class="stat-card percentage"><div class="stat-number text-primary" id="statPercentage">0%</div><div class="text-muted small">This Month</div></div></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-user-check me-2 text-primary"></i>Mark Today's Attendance</div>
+      <div id="attendanceAlert"></div>
+      <div class="d-flex gap-3 flex-wrap">
+        <button class="btn-present" onclick="markAttendance('Present')"><i class="fas fa-check me-2"></i>Present</button>
+        <button class="btn-absent" onclick="markAttendance('Absent')"><i class="fas fa-times me-2"></i>Absent</button>
+        <button class="btn-late" onclick="markAttendance('Late')"><i class="fas fa-clock me-2"></i>Late</button>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-chart-pie me-2 text-primary"></i>Monthly Attendance</div>
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="input-group">
+            <input type="month" id="monthPicker" class="form-control">
+            <button class="btn btn-primary" onclick="getPercentage()">Check</button>
+          </div>
+        </div>
+        <div class="col-md-6 mt-3 mt-md-0" id="percentageResult"></div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-history me-2 text-primary"></i>Attendance History</div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Date</th><th>Status</th><th>Marked At</th></tr></thead>
+          <tbody id="historyBody"><tr><td colspan="3" class="text-center text-muted">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-paper-plane me-2 text-primary"></i>Submit Task</div>
+      <div id="taskAlert"></div>
+      <div class="mb-3"><input type="text" id="taskTitle" class="form-control" placeholder="Task Title"></div>
+      <div class="mb-3"><textarea id="taskDesc" class="form-control" rows="3" placeholder="Task Description"></textarea></div>
+      <button class="btn-submit" onclick="submitTask()"><i class="fas fa-paper-plane me-2"></i>Submit Task</button>
+    </div>
+    <div class="section-card">
+      <div class="section-title"><i class="fas fa-tasks me-2 text-primary"></i>My Tasks</div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Title</th><th>Description</th><th>Status</th><th>Submitted At</th></tr></thead>
+          <tbody id="tasksBody"><tr><td colspan="4" class="text-center text-muted">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+    var BASE_URL = 'http://localhost:5000';
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = 'login.html'; }
+    var name = localStorage.getItem('name');
+    if (name) {
+      document.getElementById('studentName').innerText = name;
+      document.getElementById('navName').innerText = name;
+    }
+    getHistory();
+    getMyTasks();
+    getMonthlyStats();
+    function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+    function showAlert(id, msg, type) {
+      document.getElementById(id).innerHTML = '<div class="alert alert-' + type + ' alert-dismissible">' + msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+    }
+    async function markAttendance(status) {
+      try {
+        var res = await fetch(BASE_URL + '/api/attendance/mark', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ status: status })
+        });
+        var data = await res.json();
+        if (res.ok) { showAlert('attendanceAlert', data.message, 'success'); getHistory(); getMonthlyStats(); }
+        else { showAlert('attendanceAlert', data.error, 'danger'); }
+      } catch (err) { showAlert('attendanceAlert', 'Cannot connect to server!', 'danger'); }
+    }
+    async function getHistory() {
+      try {
+        var res = await fetch(BASE_URL + '/api/attendance/history', { headers: { 'Authorization': 'Bearer ' + token } });
+        var data = await res.json();
+        var tbody = document.getElementById('historyBody');
+        if (data.history.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No attendance records yet</td></tr>'; return; }
+        var rows = '';
+        for (var i = 0; i < data.history.length; i++) {
+          var r = data.history[i];
+          rows += '<tr><td>' + r.date + '</td><td><span class="badge-' + r.status.toLowerCase() + '">' + r.status + '</span></td><td>' + r.marked_at + '</td></tr>';
+        }
+        tbody.innerHTML = rows;
+      } catch (err) {}
+    }
+    async function getMonthlyStats() {
+      var today = new Date();
+      var month = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+      try {
+        var res = await fetch(BASE_URL + '/api/attendance/percentage?month=' + month, { headers: { 'Authorization': 'Bearer ' + token } });
+        var data = await res.json();
+        document.getElementById('statPresent').innerText = data.present;
+        document.getElementById('statAbsent').innerText = data.absent;
+        document.getElementById('statLate').innerText = data.late;
+        document.getElementById('statPercentage').innerText = data.percentage + '%';
+      } catch (err) {}
+    }
+    async function getPercentage() {
+      var month = document.getElementById('monthPicker').value;
+      if (!month) { alert('Please select a month!'); return; }
+      try {
+        var res = await fetch(BASE_URL + '/api/attendance/percentage?month=' + month, { headers: { 'Authorization': 'Bearer ' + token } });
+        var data = await res.json();
+        var color = data.percentage >= 75 ? 'success' : data.percentage >= 50 ? 'warning' : 'danger';
+        document.getElementById('percentageResult').innerHTML = '<div class="mb-2 fw-semibold">' + data.month + ' - ' + data.percentage + '% Attendance</div><div class="progress"><div class="progress-bar bg-' + color + '" style="width:' + data.percentage + '%"></div></div><div class="mt-2 small text-muted">Present: ' + data.present + ' | Absent: ' + data.absent + ' | Late: ' + data.late + ' | Total: ' + data.total_days + '</div>';
+      } catch (err) {}
+    }
+    async function submitTask() {
+      var title = document.getElementById('taskTitle').value;
+      var description = document.getElementById('taskDesc').value;
+      if (!title) { showAlert('taskAlert', 'Title is required!', 'danger'); return; }
+      try {
+        var res = await fetch(BASE_URL + '/api/tasks/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ title: title, description: description })
+        });
+        var data = await res.json();
+        if (res.ok) { showAlert('taskAlert', data.message, 'success'); document.getElementById('taskTitle').value = ''; document.getElementById('taskDesc').value = ''; getMyTasks(); }
+        else { showAlert('taskAlert', data.error, 'danger'); }
+      } catch (err) { showAlert('taskAlert', 'Cannot connect to server!', 'danger'); }
+    }
+    async function getMyTasks() {
+      try {
+        var res = await fetch(BASE_URL + '/api/tasks/my-tasks', { headers: { 'Authorization': 'Bearer ' + token } });
+        var data = await res.json();
+        var tbody = document.getElementById('tasksBody');
+        if (data.tasks.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No tasks submitted yet</td></tr>'; return; }
+        var rows = '';
+        for (var i = 0; i < data.tasks.length; i++) {
+          var t = data.tasks[i];
+          rows += '<tr><td>' + t.title + '</td><td>' + (t.description || '-') + '</td><td><span class="badge-' + t.status.toLowerCase() + '">' + t.status + '</span></td><td>' + t.submitted_at + '</td></tr>';
+        }
+        tbody.innerHTML = rows;
+      } catch (err) {}
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

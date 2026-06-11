@@ -5,3 +5,4 @@ pymysql
 gunicorn
 cryptography
 python-dotenv
+bcrypt

@@ -6,3 +6,5 @@ gunicorn
 cryptography
 python-dotenv
 bcrypt
+pandas
+openpyxl

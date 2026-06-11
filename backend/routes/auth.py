@@ -1,7 +1,7 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import bcrypt
-from app import mysql
+from app import get_db
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -19,11 +19,11 @@ def register():
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
     try:
-        cur = mysql.connection.cursor()
-        cur.execute('INSERT INTO students (name, email, password, roll_number) VALUES (%s, %s, %s, %s)',
-                    (name, email, hashed.decode('utf-8'), roll_number))
-        mysql.connection.commit()
-        cur.close()
+        db = get_db()
+        with db.cursor() as cur:
+            cur.execute('INSERT INTO students (name, email, password, roll_number) VALUES (%s, %s, %s, %s)',
+                        (name, email, hashed.decode('utf-8'), roll_number))
+        db.commit()
         return jsonify({"message": "Student registered successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -37,19 +37,19 @@ def login():
     if not email or not password:
         return jsonify({"error": "Email and password required"}), 400
 
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT * FROM students WHERE email = %s', (email,))
-    student = cur.fetchone()
-    cur.close()
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT * FROM students WHERE email = %s', (email,))
+        student = cur.fetchone()
 
-    if student and bcrypt.checkpw(password.encode('utf-8'), student[3].encode('utf-8')):
-        token = create_access_token(identity=str(student[0]))
+    if student and bcrypt.checkpw(password.encode('utf-8'), student['password'].encode('utf-8')):
+        token = create_access_token(identity=str(student['student_id']))
         return jsonify({
             "token": token,
-            "student_id": student[0],
-            "name": student[1],
-            "email": student[2],
-            "roll_number": student[4]
+            "student_id": student['student_id'],
+            "name": student['name'],
+            "email": student['email'],
+            "roll_number": student['roll_number']
         }), 200
 
     return jsonify({"error": "Invalid email or password"}), 401
@@ -60,17 +60,17 @@ def admin_login():
     email = data.get('email')
     password = data.get('password')
 
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT * FROM admins WHERE email = %s', (email,))
-    admin = cur.fetchone()
-    cur.close()
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT * FROM admins WHERE email = %s', (email,))
+        admin = cur.fetchone()
 
-    if admin and bcrypt.checkpw(password.encode('utf-8'), admin[3].encode('utf-8')):
-        token = create_access_token(identity='admin_' + str(admin[0]))
+    if admin and bcrypt.checkpw(password.encode('utf-8'), admin['password'].encode('utf-8')):
+        token = create_access_token(identity='admin_' + str(admin['admin_id']))
         return jsonify({
             "token": token,
-            "admin_id": admin[0],
-            "name": admin[1],
+            "admin_id": admin['admin_id'],
+            "name": admin['name'],
             "role": "admin"
         }), 200
 
@@ -80,21 +80,21 @@ def admin_login():
 @jwt_required()
 def get_profile():
     student_id = get_jwt_identity()
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT student_id, name, email, roll_number, created_at FROM students WHERE student_id=%s',
-                (student_id,))
-    student = cur.fetchone()
-    cur.close()
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT student_id, name, email, roll_number, created_at FROM students WHERE student_id=%s',
+                    (student_id,))
+        student = cur.fetchone()
 
     if not student:
         return jsonify({"error": "Student not found"}), 404
 
     return jsonify({
-        "student_id": student[0],
-        "name": student[1],
-        "email": student[2],
-        "roll_number": student[3],
-        "created_at": str(student[4])
+        "student_id": student['student_id'],
+        "name": student['name'],
+        "email": student['email'],
+        "roll_number": student['roll_number'],
+        "created_at": str(student['created_at'])
     }), 200
 
 @auth_bp.route('/profile/update', methods=['PUT'])
@@ -108,11 +108,11 @@ def update_profile():
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    cur = mysql.connection.cursor()
-    cur.execute('UPDATE students SET name=%s, roll_number=%s WHERE student_id=%s',
-                (name, roll_number, student_id))
-    mysql.connection.commit()
-    cur.close()
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('UPDATE students SET name=%s, roll_number=%s WHERE student_id=%s',
+                    (name, roll_number, student_id))
+    db.commit()
     return jsonify({"message": "Profile updated successfully"}), 200
 
 @auth_bp.route('/change-password', methods=['PUT'])
@@ -126,16 +126,17 @@ def change_password():
     if not old_password or not new_password:
         return jsonify({"error": "Both old and new password required"}), 400
 
-    cur = mysql.connection.cursor()
-    cur.execute('SELECT password FROM students WHERE student_id=%s', (student_id,))
-    student = cur.fetchone()
+    db = get_db()
+    with db.cursor() as cur:
+        cur.execute('SELECT password FROM students WHERE student_id=%s', (student_id,))
+        student = cur.fetchone()
 
-    if not student or not bcrypt.checkpw(old_password.encode('utf-8'), student[0].encode('utf-8')):
+    if not student or not bcrypt.checkpw(old_password.encode('utf-8'), student['password'].encode('utf-8')):
         return jsonify({"error": "Old password is incorrect"}), 401
 
     hashed = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-    cur.execute('UPDATE students SET password=%s WHERE student_id=%s',
-                (hashed.decode('utf-8'), student_id))
-    mysql.connection.commit()
-    cur.close()
+    with db.cursor() as cur:
+        cur.execute('UPDATE students SET password=%s WHERE student_id=%s',
+                    (hashed.decode('utf-8'), student_id))
+    db.commit()
     return jsonify({"message": "Password changed successfully"}), 200

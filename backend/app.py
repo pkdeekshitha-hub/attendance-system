@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, g
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 import pymysql
@@ -40,6 +40,7 @@ def create_app():
 
     @app.teardown_appcontext
     def close_db(e=None):
+        from flask import g
         db = g.pop('db', None)
         if db is not None:
             db.close()
@@ -53,3 +54,4 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True, port=5000)
+    

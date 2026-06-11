@@ -1,17 +1,29 @@
 from flask import Flask
-from flask_mysqldb import MySQL
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+import pymysql
+import pymysql.cursors
 
-mysql = MySQL()
-jwt = JWTManager()
+mysql_conn = None
+
+def get_db():
+    from flask import current_app, g
+    if 'db' not in g:
+        g.db = pymysql.connect(
+            host=current_app.config['MYSQL_HOST'],
+            user=current_app.config['MYSQL_USER'],
+            password=current_app.config['MYSQL_PASSWORD'],
+            database=current_app.config['MYSQL_DB'],
+            port=int(current_app.config['MYSQL_PORT']),
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    return g.db
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object('config.Config')
 
-    mysql.init_app(app)
-    jwt.init_app(app)
+    jwt = JWTManager(app)
     CORS(app)
 
     from routes.auth import auth_bp
@@ -25,6 +37,12 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(tasks_bp, url_prefix='/api/tasks')
     app.register_blueprint(export_bp, url_prefix='/api/export')
+
+    @app.teardown_appcontext
+    def close_db(e=None):
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
 
     @app.route('/')
     def index():
